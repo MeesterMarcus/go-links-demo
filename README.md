@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Go Links
 
-## Getting Started
+A small internal URL-shortcut service built as an interview-ready first iteration. Teams create memorable paths such as `go/design-system`, search the shared directory, copy links, and follow redirects. Visits are counted atomically.
 
-First, run the development server:
+## Run locally
+
+Requirements: Node.js 20+ and npm.
 
 ```bash
+cp .env.example .env
+npm install
+npx prisma migrate dev
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Useful checks:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test
+npm run lint
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Architecture
 
-## Learn More
+- `src/app` owns pages and thin HTTP route handlers.
+- `src/components` contains feature components and small shadcn-style UI primitives.
+- `src/lib/links.ts` is the application/data boundary, keeping Prisma out of presentation code.
+- `src/lib/validation` is the shared Zod contract used by both React Hook Form and the API.
+- `prisma` contains the SQLite schema, migrations, and representative seed data.
 
-To learn more about Next.js, take a look at the following resources:
+The API exposes `GET /api/links` and `POST /api/links`. `GET /go/:slug` atomically increments the visit count and redirects. Mutation responses include a request ID, and unexpected failures are logged with that ID for correlation.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Assumptions and tradeoffs
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- This is an authenticated-company-network product, so identity and authorization are intentionally out of scope for the first hour. The schema is ready to gain ownership fields later.
+- Slugs are lowercase, kebab-case, and unique. Only HTTP(S) destinations are accepted to avoid dangerous protocols.
+- Search is client-side because the expected first-iteration dataset is small. Server-side pagination/search should replace it as usage grows.
+- SQLite keeps local setup nearly frictionless. A production deployment with multiple app instances should move to managed Postgres.
+- Visit counts are useful lightweight feedback, not analytics-grade data. Counting in the redirect write adds latency but gives simple, consistent semantics.
 
-## Deploy on Vercel
+## With another day
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+I would add SSO and role-based editing, owners and teams, edit/delete with audit history, reserved slugs, rate limiting and CSRF protection, OpenTelemetry traces and structured logging, API integration tests against an isolated database, pagination, health checks, and a browser-extension/DNS setup so bare `go/slug` works from the address bar.
