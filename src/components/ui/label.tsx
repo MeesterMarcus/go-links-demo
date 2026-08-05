@@ -1,0 +1,5 @@
+import * as React from "react";
+
+export function Label(props: React.ComponentProps<"label">) {
+  return <label className="text-sm font-medium text-slate-700" {...props} />;
+}
